@@ -16,7 +16,7 @@ for mon = 1:para.monte_carlo
     % disp(mon);
     [beta,phi,theta] = generate_DOA(para); % virtual DoAs of l path of the k user channel
     for cse = 1:XX
-        [h] = dictionary_channel(para,beta,phi,theta,CASE(cse));
+        [H] = dictionary_channel(para,beta,phi,theta,CASE(cse));
         %---------- you should write your algorithm here ----------
         
     end
@@ -27,3 +27,4 @@ for i = 1:XX
 end
 
 %% Plot
+
