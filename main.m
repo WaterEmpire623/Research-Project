@@ -18,13 +18,19 @@ for mon = 1:para.monte_carlo
     % disp(mon);
     [beta,phi,theta] = generate_DOA(para); % virtual DoAs of l path of the k user channel
     for cse = 1:XX
-        % [h] = dictionary_channel(para,beta,phi,theta,CASE(cse));
+        % [H] = dictionary_channel(para,beta,phi,theta,CASE(cse));
         H_transpose=zeros(CASE(cse),K);
         for k = 1:K
             H_transpose(:,k) = dictionary_channel(para,beta(:,k),phi(:,k),theta(:,k),CASE(cse));
         end
         H = transpose(H_transpose);
-        % ---------- you should write your algorithm here ----------
+        % ---------- PSO Algorithm ----------
+
+
+
+        % ---------- GA Algorithm ---------- 
+
+        
         
     end
 end
