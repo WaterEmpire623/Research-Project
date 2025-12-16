@@ -8,8 +8,9 @@ Movable_region = [9,16,25,36,49,64,81,100]; % available region for antenna move
 
 CASE = Movable_region;
 XX = length(CASE);
-L  = para.path_num;
-K  = para.user_num;
+L = para.path_num;
+K = para.user_num;
+N = para.ant_num;
 alpha = para.alpha;
 %% Determination
 SINR = zeros(K,1);
@@ -21,35 +22,33 @@ mean_rate = zeros(1,XX);
 for mon = 1:para.monte_carlo
     disp(mon);
     [beta,phi,theta] = generate_DOA(para); % virtual DoAs of l path of the k user channel
-    % for cse = 1:XX
-    for cse = 1:4
+    for cse = 1:XX
         H=zeros(CASE(cse),K);
         for k = 1:K
             H(:,k) = dictionary_channel(para,beta(:,k),phi(:,k),theta(:,k),CASE(cse));
         end
-        H_conj_trans = H';
         % % ---------- PSO Algorithm ----------
         % objective_func = @(x) func(x, H, CASE(cse), K, alpha);
         % nvars = CASE(cse) * K;
         % options = optimoptions('particleswarm', 'MaxIterations', 20, 'Display', 'none');
-        % [F_flattened] = particleswarm(objective_func, nvars);
+        % [F_flattened] = particleswarm(objective_func, nvars, [], [], options);
         % F = reshape(F_flattened, CASE(cse), K);
         % ---------- GA Algorithm ----------
         objective_func = @(x) func(x, H, CASE(cse), K, alpha);
         nvars = CASE(cse) * K;
-        options = optimoptions('ga', 'Display', 'none');
-        [F_flattened] = ga(objective_func, nvars);
+        options = optimoptions('ga', 'MaxGenerations', 200, 'Display', 'none');
+        [F_flattened] = ga(objective_func, nvars, [], [], [], [], [], [], [], options);
         F = reshape(F_flattened, CASE(cse), K);
         % ---------- SINR ----------
         for k = 1:K
-            Signal(k) = abs(H_conj_trans(k,:)*F(:,k))^2;
+            Signal(k) = abs(H(:,k)'*F(:,k))^2;
             for j = 1:K
                 if(j ~= k)
-                    Noise(k) = Noise(k) + abs(H_conj_trans(k,:)*F(:,j))^2;
+                    Noise(k,1) = Noise(k,1) + abs(H(:,k)'*F(:,j))^2;
                 end
             end
-            Noise(k) = Noise(k) + para.sigma_2;
-            SINR(k) = Signal(k)/Noise(k);
+            Noise(k,1) = Noise(k,1) + para.sigma_2;
+            SINR(k,1) = Signal(k,1)/Noise(k,1);
             all_rate(mon,cse) = all_rate(mon,cse) + log2(1 + SINR(k));
         end
     end
