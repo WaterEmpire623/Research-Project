@@ -12,10 +12,12 @@ L = para.path_num;
 K = para.user_num;
 N = para.ant_num;
 alpha = para.alpha;
+P_max = para.power;
+sigma_2 = para.sigma_2; 
 %% Determination
 SINR = zeros(K,1);
-Signal = zeros(K,1);
-Noise = zeros(K,1);
+Signal_Power = zeros(K,1);
+Noise_Power = zeros(K,1);
 all_rate  = zeros(para.monte_carlo,XX);
 mean_rate = zeros(1,XX);
 %% Main
@@ -27,28 +29,23 @@ for mon = 1:para.monte_carlo
         for k = 1:K
             H(:,k) = dictionary_channel(para,beta(:,k),phi(:,k),theta(:,k),CASE(cse));
         end
-        % % ---------- PSO Algorithm ----------
-        % objective_func = @(x) func(x, H, CASE(cse), K, alpha);
-        % nvars = CASE(cse) * K;
-        % options = optimoptions('particleswarm', 'MaxIterations', 20, 'Display', 'none');
-        % [F_flattened] = particleswarm(objective_func, nvars, [], [], options);
-        % F = reshape(F_flattened, CASE(cse), K);
         % ---------- GA Algorithm ----------
-        objective_func = @(x) func(x, H, CASE(cse), K, alpha);
-        nvars = CASE(cse) * K;
-        options = optimoptions('ga', 'MaxGenerations', 200, 'Display', 'none');
-        [F_flattened] = ga(objective_func, nvars, [], [], [], [], [], [], [], options);
-        F = reshape(F_flattened, CASE(cse), K);
+        H_sel = GA_sel(H,N,CASE(cse),K,P_max,sigma_2);
+        F = H_sel/(H_sel'*H_sel+alpha*eye(K));
+        H_conj_trans = H_sel';
+        for k=1:K
+            F(:,k) = F(:,k) / norm(F(:,k)); % Normalization
+        end
         % ---------- SINR ----------
         for k = 1:K
-            Signal(k) = abs(H(:,k)'*F(:,k))^2;
+            Signal_Power(k) = abs(H(:,k)'*F(:,k))^2;
             for j = 1:K
                 if(j ~= k)
-                    Noise(k,1) = Noise(k,1) + abs(H(:,k)'*F(:,j))^2;
+                    Noise_Power(k,1) = Noise_Power(k,1) + abs(H(:,k)'*F(:,j))^2;
                 end
             end
-            Noise(k,1) = Noise(k,1) + para.sigma_2;
-            SINR(k,1) = Signal(k,1)/Noise(k,1);
+            Noise_Power(k,1) = Noise_Power(k,1) + para.sigma_2;
+            SINR(k,1) = Signal_Power(k,1)/Noise_Power(k,1);
             all_rate(mon,cse) = all_rate(mon,cse) + log2(1 + SINR(k));
         end
     end
@@ -63,7 +60,10 @@ xlabel('Size of Movable Region G');
 ylabel('Sum Rate [bit/s/Hz]');
 grid on;
 
-function Result = func(x, H, N, K, alpha)
-    F = reshape(x, N, K);
-    Result = norm(eye(K) - H'*F,"fro")^2 + alpha*norm(F,"fro")^2;
+function [H_sel] = GA_SEL(H,N,CASE(cse),K,P_max,sigma_2)
+    
+end
+
+function GA_output = func(x, H, N, K, alpha)
+
 end
