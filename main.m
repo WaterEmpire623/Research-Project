@@ -33,9 +33,8 @@ for mon = 1:para.monte_carlo
         pos_indices = round(pos_opt); % round indices
         pos_indices = max(1, min(G, pos_indices)); % remove negative indices
         H_sel = H(:, pos_indices)';
-        F_sel = H_sel'/(H_sel*H_sel'+alpha*eye(K));
-        F_sel = F_sel';
-        
+        F_sel = H_sel/(H_sel'*H_sel+alpha*eye(K)); 
+
         % Normalize power
         total_power = sum(abs(F_sel(:)).^2);
         if total_power > 1e-10
@@ -81,8 +80,7 @@ function sum_rate = ga_sum_rate_objective(positions, H, G, K, alpha, para)
     pos_indices = round(positions); % round indices
     pos_indices = max(1, min(G, pos_indices)); % remove negative indices
     H = H(:, pos_indices)';
-    F = H'/(H'*H + alpha*eye(K));
-    F = F';
+    F = H/(H'*H+alpha*eye(K)); 
     
     % Normalize power
     total_power = sum(abs(F(:)).^2);
