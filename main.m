@@ -1,6 +1,6 @@
 clear; close all; clc;
 addpath("functions");
-rng(0) % the random number generator start from the same starting point
+% rng(0) % the random number generator start from the same starting point
 %% System parameters
 [para] = parameter(); % System parameters stored in function
 Movable_region = [9,16,25,36,49,64,81,100]; % available region for antenna move
@@ -24,16 +24,16 @@ for mon = 1:para.monte_carlo
             H_conj_trans(:,k) = dictionary_channel(para,beta(:,k),phi(:,k),theta(:,k),CASE(cse));
         end
         H = H_conj_trans';
-        % GA Algorithm
+        % % GA Algorithm
         objective_func = @(positions) -1 * ga_func(positions, H, G, K, alpha, para); % find maximum so take negative of output
         nvars = N; % N movable antennas
-        options = optimoptions('ga', 'Display', 'off', 'MaxGenerations', 200);
+        options = optimoptions('ga', 'Display', 'off');
         [pos_opt, neg_sum_rate] = ga(objective_func, nvars, [], [], [], [], [], [], [], [], options);
         % Calculate F
         pos_indices = round(pos_opt); % round indices
         pos_indices = max(1, min(G, pos_indices)); % change illegal indices
-        H_sel = H(:, pos_indices)';
-        F_sel = H_sel/(H_sel'*H_sel+alpha*eye(K));
+        H_sel = H(:, pos_indices)'; % H_sel is N x K matrix
+        F_sel = H_sel/(H_sel'*H_sel+alpha*eye(K)); % F_sel is N x K matrix
         % Normalize Power
         total_power = sum(abs(F_sel(:)).^2);
         F_sel = F_sel * sqrt(para.power/total_power);
@@ -44,7 +44,7 @@ for mon = 1:para.monte_carlo
 end
 %% Average rates
 for i = 1:XX
-    mean_rate(i) = mean(all_rate(:,i));   
+    mean_rate(i) = mean(all_rate(:,i));    
 end
 %% Plot
 plot(Movable_region, mean_rate, '-s', 'LineWidth', 2, 'MarkerSize', 6,'MarkerFaceColor', 'b', 'MarkerEdgeColor', 'b', 'Color', 'b');
@@ -78,7 +78,7 @@ function sum_rate = ga_func(positions, H, G, K, alpha, para)
     total_power = sum(abs(F(:)).^2);
     F = F * sqrt(para.power/total_power);
     sum_rate = calculate_sum_rate(H, F, K, para.sigma_2);
-    if(~unique(pos_indices)) % Remove results that has duplicates
-        sum_rate = 1000;
+    if(numel(unique(pos_indices)) < numel(pos_indices)) % Remove results that has duplicates
+        sum_rate = -1000;
     end
 end
