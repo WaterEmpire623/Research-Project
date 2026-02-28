@@ -11,8 +11,10 @@ K  = para.user_num;
 N  = para.ant_num;
 alpha = para.alpha;
 %% Determination
-all_rate = zeros(para.monte_carlo, XX);
-mean_rate = zeros(1, XX);
+all_rate_ga = zeros(para.monte_carlo, XX);
+all_rate_pso = zeros(para.monte_carlo, XX);
+mean_rate_ga = zeros(1, XX);
+mean_rate_pso = zeros(1, XX);
 %% Main
 for mon = 1:para.monte_carlo
     disp(mon);
@@ -24,32 +26,49 @@ for mon = 1:para.monte_carlo
             H_conj_trans(:,k) = dictionary_channel(para,beta(:,k),phi(:,k),theta(:,k),CASE(cse));
         end
         H = H_conj_trans';
-        % % GA Algorithm
+        % GA Algorithm
         objective_func = @(positions) -1 * ga_func(positions, H, G, K, alpha, para); % find maximum so take negative of output
         nvars = N; % N movable antennas
-        options = optimoptions('ga', 'Display', 'off');
-        [pos_opt, neg_sum_rate] = ga(objective_func, nvars, [], [], [], [], [], [], [], [], options);
+        options_ga = optimoptions('ga', 'Display', 'off');
+        [pos_opt_ga, neg_sum_rate_ga] = ga(objective_func, nvars, [], [], [], [], [], [], [], [], options_ga);
+        % PSO Algorithm
+        lb = ones(1, nvars);      % Lower bound: index 1
+        ub = G * ones(1, nvars);  % Upper bound: grid size G
+        options_pso = optimoptions('particleswarm', 'Display', 'off');
+        [pos_opt_pso, neg_sum_rate_pso] = particleswarm(objective_func, nvars, lb, ub, options_pso);
         % Calculate F
-        pos_indices = round(pos_opt); % round indices
-        pos_indices = max(1, min(G, pos_indices)); % change illegal indices
-        H_sel = H(:, pos_indices)'; % H_sel is N x K matrix
-        F_sel = H_sel/(H_sel'*H_sel+alpha*eye(K)); % F_sel is N x K matrix
+        pos_indices_ga = round(pos_opt_ga); % round indices
+        pos_indices_pso = round(pos_opt_pso); % round indices
+        pos_indices_ga = max(1, min(G, pos_indices_ga)); % change illegal indices
+        pos_indices_pso = max(1, min(G, pos_indices_pso)); % change illegal indices
+        H_sel_ga = H(:, pos_indices_ga)'; % H_sel is N x K matrix
+        H_sel_pso = H(:, pos_indices_pso)'; % H_sel is N x K matrix
+        F_sel_ga = H_sel_ga/(H_sel_ga'*H_sel_ga+alpha*eye(K)); % F_sel is N x K matrix
+        F_sel_pso = H_sel_pso/(H_sel_pso'*H_sel_pso+alpha*eye(K)); % F_sel is N x K matrix
         % Normalize Power
-        total_power = sum(abs(F_sel(:)).^2);
-        F_sel = F_sel * sqrt(para.power/total_power);
+        total_power_ga = sum(abs(F_sel_ga(:)).^2);
+        total_power_pso = sum(abs(F_sel_pso(:)).^2);
+        F_sel_ga = F_sel_ga * sqrt(para.power/total_power_ga);
+        F_sel_pso = F_sel_pso * sqrt(para.power/total_power_pso);
         % Calculate Sum Rate
-        sum_rate = calculate_sum_rate(H_sel, F_sel, K, para.sigma_2);
-        all_rate(mon, cse) = sum_rate;
+        sum_rate_ga = calculate_sum_rate(H_sel_ga, F_sel_ga, K, para.sigma_2);
+        sum_rate_pso = calculate_sum_rate(H_sel_pso, F_sel_pso, K, para.sigma_2);
+        all_rate_ga(mon, cse) = sum_rate_ga;
+        all_rate_pso(mon, cse) = sum_rate_pso;
     end
 end
 %% Average rates
 for i = 1:XX
-    mean_rate(i) = mean(all_rate(:,i));    
+    mean_rate_ga(i) = mean(all_rate_ga(:,i));   
+    mean_rate_pso(i) = mean(all_rate_pso(:,i));     
 end
 %% Plot
-plot(Movable_region, mean_rate, '-s', 'LineWidth', 2, 'MarkerSize', 6,'MarkerFaceColor', 'b', 'MarkerEdgeColor', 'b', 'Color', 'b');
+plot(Movable_region, mean_rate_ga, '-s', 'LineWidth', 2, 'MarkerSize', 6,'MarkerFaceColor', 'b', 'MarkerEdgeColor', 'b', 'Color', 'b');
+hold on;
+plot(Movable_region, mean_rate_pso, '-s', 'LineWidth', 2, 'MarkerSize', 6,'MarkerFaceColor', 'r', 'MarkerEdgeColor', 'r', 'Color', 'r');
 xlabel('Size of Movable Region G');
 ylabel('Sum Rate [bit/s/Hz]');
+legend('GA','PSO');
 grid on;
 %% Functions
 function sum_rate = calculate_sum_rate(H, F, K, sigma_2)
