@@ -10,17 +10,10 @@ L  = para.path_num;
 K  = para.user_num;
 N  = para.ant_num;
 alpha = para.alpha;
+power = para.power;
 %% Determination
-all_rate_ga = zeros(para.monte_carlo, XX);
-mean_rate_ga = zeros(1, XX);
-all_rate_pso = zeros(para.monte_carlo, XX);
-mean_rate_pso = zeros(1, XX);
-all_rate_abc = zeros(para.monte_carlo, XX);
-mean_rate_abc = zeros(1, XX);
-all_rate_mfo = zeros(para.monte_carlo, XX);
-mean_rate_mfo = zeros(1, XX);
-all_rate_mpa = zeros(para.monte_carlo, XX);
-mean_rate_mpa = zeros(1, XX);
+[all_rate_ga, all_rate_pso, all_rate_abc, all_rate_mfo, all_rate_mpa] = deal(zeros(para.monte_carlo, XX));
+[mean_rate_ga, mean_rate_pso, mean_rate_abc, mean_rate_mfo, mean_rate_mpa] = deal(zeros(1, XX));
 %% Main
 for mon = 1:para.monte_carlo
     disp(mon);
@@ -32,60 +25,35 @@ for mon = 1:para.monte_carlo
             H_conj_trans(:,k) = dictionary_channel(para,beta(:,k),phi(:,k),theta(:,k),CASE(cse));
         end
         H = H_conj_trans';
-        objective_func = @(positions) -1 * ga_func(positions, H, G, K, alpha, para); % find maximum so take negative of output
+        objective_func = @(positions) -1 * cost_func(positions, H, G, K, alpha, para); % find maximum so take negative of output
         nvars = N; % N movable antennas
         lb = ones(1, nvars);      % Lower bound: index 1
         ub = G * ones(1, nvars);  % Upper bound: grid size G
         % GA Algorithm (Genetic Algorithm)
         options_ga = optimoptions('ga', 'Display', 'off');
         [pos_opt_ga, neg_sum_rate_ga] = ga(objective_func, nvars, [], [], [], [], [], [], [], [], options_ga);
-        pos_indices_ga = round(pos_opt_ga); % round indices
-        pos_indices_ga = max(1, min(G, pos_indices_ga)); % change illegal indices
-        H_sel_ga = H(:, pos_indices_ga)'; % H_sel is N x K matrix
-        F_sel_ga = H_sel_ga/(H_sel_ga'*H_sel_ga+alpha*eye(K)); % F_sel is N x K matrix
-        total_power_ga = sum(abs(F_sel_ga(:)).^2); 
-        F_sel_ga = F_sel_ga * sqrt(para.power/total_power_ga); % Normalize Power
-        sum_rate_ga = calculate_sum_rate(H_sel_ga, F_sel_ga, K, para.sigma_2); % Calculate Sum Rate
+        [F_sel_ga, H_sel_ga] = F_selection(pos_opt_ga, H, G, K, alpha, power);
+        sum_rate_ga = calculate_sum_rate(H_sel_ga, F_sel_ga, K, para.sigma_2);
         all_rate_ga(mon, cse) = sum_rate_ga;
         % PSO Algorithm (Particle Swarm Optimization)
         options_pso = optimoptions('particleswarm', 'Display', 'off');
         [pos_opt_pso, neg_sum_rate_pso] = particleswarm(objective_func, nvars, lb, ub, options_pso);
-        pos_indices_pso = round(pos_opt_pso);
-        pos_indices_pso = max(1, min(G, pos_indices_pso));
-        H_sel_pso = H(:, pos_indices_pso)';
-        F_sel_pso = H_sel_pso/(H_sel_pso'*H_sel_pso+alpha*eye(K));
-        total_power_pso = sum(abs(F_sel_pso(:)).^2);
-        F_sel_pso = F_sel_pso * sqrt(para.power/total_power_pso);
+        [F_sel_pso, H_sel_pso] = F_selection(pos_opt_pso, H, G, K, alpha, power);
         sum_rate_pso = calculate_sum_rate(H_sel_pso, F_sel_pso, K, para.sigma_2);
         all_rate_pso(mon, cse) = sum_rate_pso;
         % ABC Algorithm (Artificial Bee Colony Algorithm)
         [pos_opt_abc, neg_sum_rate_abc] = ABC(objective_func, lb, ub, 50, 100, 20);
-        pos_indices_abc = round(pos_opt_abc);
-        pos_indices_abc = max(1, min(G, pos_indices_abc));
-        H_sel_abc = H(:, pos_indices_abc)';
-        F_sel_abc = H_sel_abc/(H_sel_abc'*H_sel_abc+alpha*eye(K));
-        total_power_abc = sum(abs(F_sel_abc(:)).^2);
-        F_sel_abc = F_sel_abc * sqrt(para.power/total_power_abc);
+        [F_sel_abc, H_sel_abc] = F_selection(pos_opt_abc, H, G, K, alpha, power);
         sum_rate_abc = calculate_sum_rate(H_sel_abc, F_sel_abc, K, para.sigma_2);
         all_rate_abc(mon, cse) = sum_rate_abc;
         % MFO Algorithm (Moth Flame Optimization)
-        [mfo_score, mfo_pos, ~] = MFO(50, 100, lb, ub, nvars, objective_func);
-        pos_indices_mfo = round(mfo_pos);
-        pos_indices_mfo = max(1, min(G, pos_indices_mfo));
-        H_sel_mfo = H(:, pos_indices_mfo)';
-        F_sel_mfo = H_sel_mfo/(H_sel_mfo'*H_sel_mfo + alpha*eye(K));
-        total_power_mfo = sum(abs(F_sel_mfo(:)).^2);
-        F_sel_mfo = F_sel_mfo * sqrt(para.power/total_power_mfo);
+        [mfo_score, pos_opt_mfo, ~] = MFO(50, 100, lb, ub, nvars, objective_func);
+        [F_sel_mfo, H_sel_mfo] = F_selection(pos_opt_mfo, H, G, K, alpha, power);
         sum_rate_mfo = calculate_sum_rate(H_sel_mfo, F_sel_mfo, K, para.sigma_2);
         all_rate_mfo(mon, cse) = sum_rate_mfo;
         % MPA Algorithm (Marine Predators Algorithm)
         [mpa_score, pos_opt_mpa, ~] = MPA(50, 100, lb, ub, nvars, objective_func);
-        pos_indices_mpa = round(pos_opt_mpa);
-        pos_indices_mpa = max(1, min(G, pos_indices_mpa));
-        H_sel_mpa = H(:, pos_indices_mpa)';
-        F_sel_mpa = H_sel_mpa/(H_sel_mpa'*H_sel_mpa + alpha*eye(K));
-        total_power_mpa = sum(abs(F_sel_mpa(:)).^2);
-        F_sel_mpa = F_sel_mpa * sqrt(para.power/total_power_mpa);
+        [F_sel_mpa, H_sel_mpa] = F_selection(pos_opt_mpa, H, G, K, alpha, power);
         sum_rate_mpa = calculate_sum_rate(H_sel_mpa, F_sel_mpa, K, para.sigma_2);
         all_rate_mpa(mon, cse) = sum_rate_mpa;
     end
@@ -113,6 +81,15 @@ ylabel('Sum Rate [bit/s/Hz]');
 legend('GA','PSO','ABC','MFO','MPA');
 grid on;
 %% Functions
+function [F_sel, H_sel] = F_selection(pos_opt, H, G, K, alpha, power) % Finding H and F based on the selected antenna position
+    pos_indices = round(pos_opt); % round indices
+    pos_indices = max(1, min(G, pos_indices)); % change illegal indices
+    H_sel = H(:, pos_indices)'; % H_sel is N x K matrix
+    F_sel = H_sel/(H_sel'*H_sel + alpha*eye(K)); % F_sel is N x K matrix
+    total_power = sum(abs(F_sel(:)).^2);
+    F_sel = F_sel * sqrt(power/total_power); % Normalize Power
+end
+
 function sum_rate = calculate_sum_rate(H, F, K, sigma_2)
     sum_rate = 0;
     signal_power = zeros(K:1);
@@ -131,7 +108,7 @@ function sum_rate = calculate_sum_rate(H, F, K, sigma_2)
     end
 end
 
-function sum_rate = ga_func(positions, H, G, K, alpha, para)
+function sum_rate = cost_func(positions, H, G, K, alpha, para)
     pos_indices = round(positions);
     pos_indices = max(1, min(G, pos_indices));
     H = H(:, pos_indices)';
