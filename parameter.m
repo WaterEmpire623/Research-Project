@@ -12,4 +12,4 @@ para.sigma_2        = 1;        % noise power
 para.power          = 1;        % transmit power
 para.alpha          = 0.01;     % precoder regularized factor, 1 for MMSE, 0.01 for ZF
 %% Realization
-para.monte_carlo    = 2;     % Realization times
+para.monte_carlo    = 100;     % Realization times
