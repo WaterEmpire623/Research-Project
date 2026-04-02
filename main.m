@@ -31,14 +31,14 @@ for mon = 1:para.monte_carlo
         lb = ones(1, nvars);      % Lower bound: index 1
         ub = G * ones(1, nvars);  % Upper bound: grid size G
         % GA Algorithm (Genetic Algorithm)
-        options_ga = optimoptions('ga', 'Display', 'off');
+        options_ga = optimoptions('ga', 'Display', 'off', 'PopulationSize', 100);
         [pos_opt_ga, neg_sum_rate_ga] = ga(objective_func, nvars, [], [], [], [], [], [], [], [], options_ga);
         [F_sel_ga, H_sel_ga, pos_indices_ga] = F_selection(pos_opt_ga, H, G, K, alpha, power);
         sel_pos_history_ga{mon, cse} = round(pos_indices_ga);
         sum_rate_ga = calculate_sum_rate(H_sel_ga, F_sel_ga, K, para.sigma_2);
         all_rate_ga(mon, cse) = sum_rate_ga;
         % PSO Algorithm (Particle Swarm Optimization)
-        options_pso = optimoptions('particleswarm', 'Display', 'off');
+        options_pso = optimoptions('particleswarm', 'Display', 'off', 'SwarmSize', 200);
         [pos_opt_pso, neg_sum_rate_pso] = particleswarm(objective_func, nvars, lb, ub, options_pso);
         [F_sel_pso, H_sel_pso, pos_indices_pso] = F_selection(pos_opt_pso, H, G, K, alpha, power);
         sel_pos_history_pso{mon, cse} = round(pos_indices_pso);
