@@ -12,9 +12,9 @@ N  = para.ant_num;
 alpha = para.alpha;
 power = para.power;
 %% Determination
-[all_rate_ga, all_rate_pso, all_rate_abc, all_rate_mfo, all_rate_mpa] = deal(zeros(para.monte_carlo, XX));
-[mean_rate_ga, mean_rate_pso, mean_rate_abc, mean_rate_mfo, mean_rate_mpa] = deal(zeros(1, XX));
-[sel_pos_history_ga, sel_pos_history_pso, sel_pos_history_abc, sel_pos_history_mfo, sel_pos_history_mpa] = deal(cell(para.monte_carlo, XX)); % To record selected antenna position
+[all_rate_ga, all_rate_pso, all_rate_abc, all_rate_mfo, all_rate_mpa, all_rate_random] = deal(zeros(para.monte_carlo, XX));
+[mean_rate_ga, mean_rate_pso, mean_rate_abc, mean_rate_mfo, mean_rate_mpa, mean_rate_random] = deal(zeros(1, XX));
+[sel_pos_history_ga, sel_pos_history_pso, sel_pos_history_abc, sel_pos_history_mfo, sel_pos_history_mpa, sel_pos_history_random] = deal(cell(para.monte_carlo, XX)); % To record selected antenna position
 %% Main
 for mon = 1:para.monte_carlo
     disp(mon);
@@ -62,6 +62,12 @@ for mon = 1:para.monte_carlo
         sel_pos_history_mpa{mon, cse} = round(pos_indices_mpa);
         sum_rate_mpa = calculate_sum_rate(H_sel_mpa, F_sel_mpa, K, para.sigma_2);
         all_rate_mpa(mon, cse) = sum_rate_mpa;
+        % Random Select
+        pos_opt_random = randi(G, 1, K);
+        [F_sel_random, H_sel_random, pos_indices_random] = F_selection(pos_opt_random, H, G, K, alpha, power);
+        sel_pos_history_random{mon, cse} = round(pos_indices_random);
+        sum_rate_random = calculate_sum_rate(H_sel_random, F_sel_random, K, para.sigma_2);
+        all_rate_random(mon, cse) = sum_rate_random;
     end
 end
 %% Average rates
@@ -71,6 +77,7 @@ for i = 1:XX
     mean_rate_abc(i) = mean(all_rate_abc(:,i));
     mean_rate_mfo(i) = mean(all_rate_mfo(:,i));
     mean_rate_mpa(i) = mean(all_rate_mpa(:,i));
+    mean_rate_random(i) = mean(all_rate_random(:,i));
 end
 %% Plot
 plot(Movable_region, mean_rate_ga, '-s', 'LineWidth', 2, 'MarkerSize', 6,'MarkerFaceColor', 'b', 'MarkerEdgeColor', 'b', 'Color', 'b');
@@ -82,9 +89,11 @@ hold on;
 plot(Movable_region, mean_rate_mfo, '-s', 'LineWidth', 2, 'MarkerSize', 6,'MarkerFaceColor', 'y', 'MarkerEdgeColor', 'y', 'Color', 'y');
 hold on;
 plot(Movable_region, mean_rate_mpa, '-s', 'LineWidth', 2, 'MarkerSize', 6,'MarkerFaceColor', 'c', 'MarkerEdgeColor', 'c', 'Color', 'c');
+hold on;
+plot(Movable_region, mean_rate_random, '-s', 'LineWidth', 2, 'MarkerSize', 6,'MarkerFaceColor', 'w', 'MarkerEdgeColor', 'w', 'Color', 'w');
 xlabel('Size of Movable Region G');
 ylabel('Sum Rate [bit/s/Hz]');
-legend('GA','PSO','ABC','MFO','MPA');
+legend('GA','PSO','ABC','MFO','MPA','Random Selection','Location','northwest');
 grid on;
 %% Functions
 function [F_sel, H_sel, pos_indices] = F_selection(pos_opt, H, G, K, alpha, power) % Finding H and F based on the selected antenna position
